@@ -3,6 +3,7 @@
 namespace React\Http;
 
 use Evenement\EventEmitter;
+use Psr\Http\Message\UriInterface;
 use React\Stream\ReadableStreamInterface;
 use React\Stream\WritableStreamInterface;
 use React\Stream\Util;
@@ -22,10 +23,18 @@ class Request extends EventEmitter implements ReadableStreamInterface
     // metadata, implicitly added externally
     public $remoteAddress;
 
-    public function __construct($method, $url, $query = array(), $httpVersion = '1.1', $headers = array(), $body = '')
+    /**
+     * @param $method
+     * @param UriInterface $uri
+     * @param array $query
+     * @param string $httpVersion
+     * @param array $headers
+     * @param string $body
+     */
+    public function __construct($method, $uri, $query = array(), $httpVersion = '1.1', $headers = array(), $body = '')
     {
         $this->method = $method;
-        $this->url = $url;
+        $this->url = $uri;
         $this->query = $query;
         $this->httpVersion = $httpVersion;
         $this->headers = $headers;
@@ -39,7 +48,7 @@ class Request extends EventEmitter implements ReadableStreamInterface
 
     public function getPath()
     {
-        return $this->url['path'];
+        return $this->url->getPath();
     }
 
     public function getUrl()
@@ -49,7 +58,7 @@ class Request extends EventEmitter implements ReadableStreamInterface
 
     public function getQuery()
     {
-        return $this->query;
+        return \GuzzleHttp\Psr7\parse_query($this->query);
     }
 
     public function getHttpVersion()
@@ -59,7 +68,11 @@ class Request extends EventEmitter implements ReadableStreamInterface
 
     public function getHeaders()
     {
-        return $this->headers;
+        $headers = [];
+        foreach($this->headers as $key => $value) {
+            $headers[$key] = $value[0];
+        }
+        return $headers;
     }
 
     public function getBody()

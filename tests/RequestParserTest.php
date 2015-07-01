@@ -2,6 +2,7 @@
 
 namespace React\Tests\Http;
 
+use React\Http\Request;
 use React\Http\RequestParser;
 
 class RequestParserTest extends TestCase
@@ -74,6 +75,7 @@ class RequestParserTest extends TestCase
 
     public function testHeadersEventShouldParsePathAndQueryString()
     {
+        /** @var Request $request */
         $request = null;
 
         $parser = new RequestParser();

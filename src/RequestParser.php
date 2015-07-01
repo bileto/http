@@ -91,20 +91,14 @@ class RequestParser extends EventEmitter
 
     public function parseHeaders($data)
     {
-        $parser = new MessageParser();
-        $parsed = $parser->parseRequest($data);
-
-        $parsedQuery = array();
-        if ($parsed['request_url']['query']) {
-            parse_str($parsed['request_url']['query'], $parsedQuery);
-        }
+        $parsed = \GuzzleHttp\Psr7\parse_request($data);
 
         return new Request(
-            $parsed['method'],
-            $parsed['request_url'],
-            $parsedQuery,
-            $parsed['version'],
-            $parsed['headers']
+            $parsed->getMethod(),
+            $parsed->getUri(),
+            $parsed->getUri()->getQuery(),
+            $parsed->getProtocolVersion(),
+            $parsed->getHeaders()
         );
     }
 
