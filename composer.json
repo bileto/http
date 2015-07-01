@@ -1,5 +1,5 @@
 {
-    "name": "react/http",
+    "name": "bileto/http",
     "description": "Library for building an evented http server.",
     "keywords": ["http"],
     "license": "MIT",
