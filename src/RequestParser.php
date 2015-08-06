@@ -91,8 +91,11 @@ class RequestParser extends EventEmitter
 
     public function parseHeaders($data)
     {
-        $parsed = \GuzzleHttp\Psr7\parse_request($data);
-
+        try {
+            $parsed = \GuzzleHttp\Psr7\parse_request($data);
+        } catch (\InvalidArgumentException $e) {
+            return null;
+        }
         return new Request(
             $parsed->getMethod(),
             $parsed->getUri(),
