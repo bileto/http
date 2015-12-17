@@ -2,6 +2,8 @@
 
 namespace React\Http;
 
+use function GuzzleHttp\Psr7\parse_header;
+
 /**
  * Parse a multipart body
  *
@@ -132,28 +134,41 @@ class MultipartParser
      * Parse a file
      *
      * @param $string
-     * @return array
      */
     protected function file($string)
     {
-        preg_match('/name=\"([^\"]*)\"; filename=\"([^\"]*)\"[\n|\r]+([^\n\r].*)?\r$/s', $string, $match);
-        preg_match('/Content-Type: (.*)?/', $match[3], $mime);
+        // Remove leading newlines
+        $string = ltrim($string, "\r\n");
 
-        $content = preg_replace('/Content-Type: (.*)[^\n\r]/', '', $match[3]);
-        $content = ltrim($content, "\r\n");
+        if (false === strpos($string, "\r\n\r\n")) {
+            return;
+        }
 
-        $path = tempnam(sys_get_temp_dir(), "php");
-        $err = file_put_contents($path, $content);
+        list($headers, $body) = explode("\r\n\r\n", $string, 2);
+
+        $body = rtrim($body, "\r\n");
+
+        $headers = $this->parseHeaders($headers);
+
+        $contentType = $this->extractContentType($headers);
+        $contentDispositionParts = $this->extractContentDisposition($headers);
+
+        if (!isset($contentDispositionParts['name'])) {
+            return;
+        }
+
+        $path = tempnam(sys_get_temp_dir(), 'php');
+        $err = file_put_contents($path, $body);
 
         $data = [
-            'name' => $match[2],
-            'type' => trim($mime[1]),
+            'name' => isset($contentDispositionParts['filename']) ? $contentDispositionParts['filename'] : null,
+            'type' => $contentType,
             'tmp_name' => $path,
             'error' => ($err === false) ? UPLOAD_ERR_NO_FILE : UPLOAD_ERR_OK,
             'size' => filesize($path),
         ];
 
-        $this->addResolved('files', $match[1], $data);
+        $this->addResolved('files', $contentDispositionParts['name'], $data);
     }
 
     /**
@@ -189,5 +204,35 @@ class MultipartParser
         } else {
             $this->{$type}[$key] = $content;
         }
+    }
+
+    /**
+     * @param string $headers
+     * @return array
+     */
+    private function parseHeaders($headers)
+    {
+        $result = [];
+        $headers = preg_split("/\r\n/", $headers);
+        foreach ($headers as $header) {
+            $header = preg_split('/\s*:\s*+/', $header, 2);
+            $result[strtolower($header[0])][] = $header[1];
+        }
+
+        return $result;
+    }
+
+    private function extractContentType(array $headers)
+    {
+        return isset($headers['content-type'])
+            ? $headers['content-type'][0]
+            : null;
+    }
+
+    private function extractContentDisposition(array $headers)
+    {
+        return isset($headers['content-disposition'])
+            ? parse_header($headers['content-disposition'][0])[0]
+            : [];
     }
 }
