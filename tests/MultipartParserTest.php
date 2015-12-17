@@ -96,4 +96,39 @@ class MultipartParserTest extends TestCase {
 
         $this->assertEquals($expected_file, $uploaded_blank);
     }
+
+    public function testFileUploadWithDifferentHeadersOrder()
+    {
+        $file = base64_decode("R0lGODlhAQABAIAAAP///wAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==");
+
+        $boundary = "---------------------------12758086162038677464950549563";
+
+        $data  = "--$boundary\r\n";
+        $data .= "Content-Type: image/gif\r\n";
+        $data .= "Content-Disposition: form-data; name=\"files[]\"; filename=\"blank.gif\"\r\n";
+        $data .= "\r\n";
+        $data .= $file . "\r\n";
+        $data .= "--$boundary\r\n";
+
+        $parser = new MultipartParser($data, $boundary);
+        $parser->parse();
+
+        $this->assertEquals(1, count($parser->getFiles()));
+        $this->assertEquals(1, count($parser->getFiles()['files']));
+
+        $uploaded_image = $parser->getFiles()['files'][0];
+
+        $this->assertEquals($file, file_get_contents($uploaded_image['tmp_name']));
+
+        $uploaded_image['tmp_name'] = 'file'; //override the filename as it is random
+        $expected_file = [
+            'name' => 'blank.gif',
+            'type' => 'image/gif',
+            'tmp_name' => 'file',
+            'error' => 0,
+            'size' => 43,
+        ];
+
+        $this->assertEquals($expected_file, $uploaded_image);
+    }
 }
